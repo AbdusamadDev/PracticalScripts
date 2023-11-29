@@ -1,0 +1,186 @@
+User
+lets skip this part and keep the cache part, what you say?
+
+GPT
+Sure, we can focus on the part of the challenge involving detecting and caching repetitive subqueries. This is a significant aspect of query optimization and can be quite interesting to implement. Here's the revised challenge:
+
+Revised Challenge: Detecting and Caching Repetitive Subqueries
+
+Your task is to create a Python function that analyzes a list of SQL queries and identifies repetitive subqueries. Once a repetitive subquery is found, your function should cache it for future use. The main goals are:
+
+Identify Repetitive Subqueries: Analyze the provided SQL queries and find subqueries that appear more than once.
+
+Cache These Subqueries: Implement a caching mechanism that stores these repetitive subqueries along with their results (you can simulate the results as we won't execute these queries).
+
+Optimize Main Queries: Modify the original queries to utilize the cached results of the subqueries instead of repeating the subquery.
+
+For example, if you have the following queries:
+
+SELECT * FROM (SELECT name FROM employees) as employee_names;
+SELECT COUNT(*) FROM (SELECT name FROM employees) as employee_names;
+Your function should recognize (SELECT name FROM employees) as a repetitive subquery and cache it. Then, it should modify the queries to use this cached result.
+
+Keep in mind:
+
+The caching mechanism can be a simple dictionary where keys are subquery strings and values are simulated results.
+Focus on how you parse and identify subqueries within the larger query.
+Consider how to handle different formats and structures of SQL queries.
+Once you've implemented this, use the sample queries provided earlier to test your function. I'll then review your solution and provide feedback.
+
+User
+here you are:
+
+
+
+(vevn) legion@LittleKid:~/Projects/coding$ python main.py
+0.00431060791015625
+0.012743473052978516
+INFO:root:Skipping due to multiprocessing
+INFO:root:Skipping due to multiprocessing
+(vevn) legion@LittleKid:~/Projects/coding$ python main.py
+0.004575490951538086
+0.007155895233154297
+INFO:root:Skipping due to multiprocessing
+(vevn) legion@LittleKid:~/Projects/coding$ python main.py
+0.004194498062133789
+0.01263570785522461
+INFO:root:Skipping due to multiprocessing
+INFO:root:Skipping due to multiprocessing
+(vevn) legion@LittleKid:~/Projects/coding$ python main.py
+0.00478053092956543
+0.0068264007568359375
+INFO:root:Skipping due to multiprocessing
+INFO:root:Skipping due to multiprocessing
+(vevn) legion@LittleKid:~/Projects/coding$ python main.py
+0.004237651824951172
+0.012618064880371094
+INFO:root:Skipping due to multiprocessing
+INFO:root:Skipping due to multiprocessing
+(vevn) legion@LittleKid:~/Projects/coding$ python main.py
+0.004624843597412109
+0.013569355010986328
+INFO:root:Skipping due to multiprocessing
+INFO:root:Skipping due to multiprocessing
+(vevn) legion@LittleKid:~/Projects/coding$ python main.py
+0.0047779083251953125
+0.012282609939575195
+INFO:root:Skipping due to multiprocessing
+INFO:root:Skipping due to multiprocessing
+(vevn) legion@LittleKid:~/Projects/coding$ python main.py
+0.004252433776855469
+0.014109373092651367
+INFO:root:Skipping due to multiprocessing
+INFO:root:Skipping due to multiprocessing
+(vevn) legion@LittleKid:~/Projects/coding$ python main.py
+0.00422978401184082
+0.007095813751220703
+INFO:root:Skipping due to multiprocessing
+INFO:root:Skipping due to multiprocessing
+(vevn) legion@LittleKid:~/Projects/coding$
+
+
+
+
+
+
+
+
+# coding utf-8
+import os
+import time
+from typing import List
+import sqlite3
+import multiprocessing
+import logging
+
+
+class SQLExecutor(sqlite3.Connection):
+    def __init__(self, db_name, query_strings: List[str]):
+        """Force initialization with custom attributes"""
+        logging.basicConfig(level=logging.INFO)
+        self.db_name = db_name
+        self.query = query_strings
+        self.connection = sqlite3.connect(self.db_name)
+        self.cursor = self.connection.cursor()
+        super().__init__(self.db_name)
+
+    def per_execution(self, query):
+        """Execution for each indexes of given array"""
+        try:
+            self.cursor.execute(query)
+            self.connection.commit()
+        except sqlite3.OperationalError:
+            logging.info("Skipping due to multiprocessing ")
+        except Exception as e:
+            logging.warning("Unable to execute query: {}".format(str(e)))
+
+    def parallelized_execution(self):
+        """
+        Custom execute method with optimal and
+        faster boosted with multiprocessing
+        """
+        for process in self.query:
+            p = multiprocessing.Process(target=self.per_execution, args=(process,))
+            p.start()
+        self.connection.close()
+
+
+if __name__ == '__main__':
+    queries = [
+        """CREATE TABLE IF NOT EXISTS test (name TEXT);""",
+        """INSERT INTO test (name) VALUES ('Testing')""",
+        """INSERT INTO test (name) VALUES ('asdasdasd')"""
+    ]
+    start = time.time()
+    executor = SQLExecutor("testing.db", query_strings=queries)
+    executor.parallelized_execution()
+    end = time.time()
+    print(end - start)
+    new_start = time.time()
+    another_task = sqlite3.connect("new.db")
+    cursor = another_task.cursor()
+    for i in queries:
+        cursor.execute(i)
+    another_task.commit()
+    another_task.close()
+    new_end = time.time()
+    print(new_end - new_start)
+    os.remove("new.db")
+    os.remove("testing.db")
+GPT
+Thank you for sharing your code. Let's review it:
+
+Code Structure and Clarity:
+
+Your code is organized into a class SQLExecutor, which is a good approach for handling SQL operations.
+The use of logging for error handling is a positive aspect, providing clarity on what's happening during execution.
+Functionality and Relevance to the Challenge:
+
+Your implementation focuses on executing SQL queries in parallel using multiprocessing. This can be beneficial for performance but does not directly address the challenge of detecting and caching repetitive subqueries.
+The program creates and executes queries on a SQLite database, which is a practical approach, but the core challenge task (caching repetitive subqueries) is not implemented.
+Efficiency and Practicality:
+
+Using multiprocessing to execute SQL queries is an interesting idea. However, for SQLite and similar databases that use file-based storage, this approach can lead to issues with database locks and concurrent access.
+The closing of connections in parallel processes might need careful handling to ensure database integrity.
+Error Handling and Robustness:
+
+The use of exception handling to catch operational errors and other exceptions is good.
+However, the specific issue of "Skipping due to multiprocessing" suggests a concurrency issue, which is a critical aspect to consider when working with databases.
+Overall Assessment:
+
+The code demonstrates a good understanding of Python, SQL operations, multiprocessing, and error handling.
+However, it does not address the specific challenge of caching repetitive subqueries in SQL queries.
+Score: 50/100
+
+Feedback:
+
+Relevance: The solution does not meet the challenge requirements regarding caching repetitive subqueries. This is a significant aspect, and meeting the challenge's core objective is crucial.
+Technical Execution: The use of multiprocessing in database operations is innovative but might not be the best approach for SQLite. Handling concurrency in databases is a complex task and requires careful consideration.
+Improvement Suggestion: Refocus the implementation to meet the challenge of detecting and caching repetitive subqueries. Consider how you can parse and analyze SQL queries to find repetitive patterns and how you can cache these for optimization.
+Remember, this score is based on the specific requirements of the challenge and is meant to be constructive. Your skills in Python and backend development are evident, and with some adjustments, your solution can be more aligned with the challenge's goals.
+
+
+
+
+
+
