@@ -4,7 +4,9 @@ import re
 import os
 
 from advanced_index import InvertedIndex as Index
+import socket
 
+socket.socket().recv()
 
 class InvertedIndex(object):
     def __init__(self):
